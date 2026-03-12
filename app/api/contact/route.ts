@@ -1,20 +1,57 @@
 import { Resend } from 'resend'
+import { render } from '@react-email/render'
+import { EmailTemplate } from '@/components/email-template'
 import { siteConfig } from '@/lib/config'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  const key = process.env.RESEND_API_KEY
+  if (!key) throw new Error('RESEND_API_KEY is missing')
+  return new Resend(key)
+}
 
 export async function POST(req: Request) {
   try {
-    const { name, email, message } = await req.json()
-    await resend.emails.send({
+    const { name, email, phone, service, subject, message } = await req.json()
+
+    if (!name || !email || !message) {
+      return Response.json({ error: 'name, email, and message are required' }, { status: 400 })
+    }
+
+    const resend = getResend()
+
+    // 1. Notification email to the studio
+    const { error: notifyError } = await resend.emails.send({
       from: siteConfig.resend.from,
       to: siteConfig.resend.to,
-      subject: `New message from ${name} — Lens Studio`,
-      html: `<p><strong>From:</strong> ${name} (${email})</p>
-             <p><strong>Message:</strong><br/>${message}</p>`,
+      replyTo: email,
+      subject: subject ? `[Enquiry] ${subject} — ${name}` : `New enquiry from ${name}`,
+      html: await render(EmailTemplate({ firstName: name, email, phone, service, subject, body: message })),
     })
+
+    if (notifyError) {
+      console.error('Resend notification error:', notifyError)
+      return Response.json({ error: notifyError.message }, { status: 500 })
+    }
+
+    // 2. Auto-reply confirmation to the sender
+    await resend.emails.send({
+      from: siteConfig.resend.from,
+      to: email,
+      subject: `We received your message — Lens Studio`,
+      html: await render(EmailTemplate({
+        firstName: name,
+        email,
+        phone,
+        service,
+        subject,
+        body: message,
+        isConfirmation: true,
+      })),
+    })
+
     return Response.json({ ok: true })
-  } catch (e) {
-    return Response.json({ error: 'Failed' }, { status: 500 })
+  } catch (err) {
+    console.error('Contact API error:', err)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

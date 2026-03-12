@@ -1,4 +1,15 @@
+import { theme } from './theme'
+
 export const siteConfig = {
+  /**
+   * ── THEME ──────────────────────────────────────────────────────────────
+   * Change colors/type/shadows here. layout.tsx injects these as CSS
+   * custom properties so every Tailwind utility class picks them up.
+   *
+   * Quick accent swap example:
+   *   gold: '#D4A843'  ← change this one line to retheme all CTAs
+   */
+  theme,
   name: 'Lens Studio',
   tagline: 'Light. Moment. Story.',
   description: 'Berlin-based photography studio specializing in portraits, editorial, and commercial work.',
@@ -14,13 +25,13 @@ export const siteConfig = {
   },
 
   booking: {
-    calUsername: 'lens-studio',
-    calEventSlug: 'photo-consultation',
+    calUsername: process.env.NEXT_PUBLIC_CAL_USERNAME ?? 'lens-studio',
+    calEventSlug: process.env.NEXT_PUBLIC_CAL_EVENT_SLUG ?? 'photo-consultation',
   },
 
   resend: {
-    from: 'noreply@lens-studio.de',
-    to: 'hello@lens-studio.de',
+    from: 'onboarding@resend.dev',
+    to: 'platon10.rochd@gmail.com',
   },
 
   nav: [
